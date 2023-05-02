@@ -1,12 +1,20 @@
-NAME=ex00
+NAME = inception
 
-FILES=$(shell docker-compose up)
+all: fclean host reload
 
-$(NAME): $(FILES)
-	$(CC) $(FLAGS) $(OBJ) -o $(NAME)
+host:
+	@ ./setup_host.sh
+	
+stop:
+	@ docker compose -f docker-compose.yml down
 
-all: $(NAME)
+clean: stop
+	@ rm -rf /tmp/inception
 
-re: all
+fclean: clean
+	@ docker system prune -f
 
-.PHONY: make all clean fclean re
+reload: 
+	@ docker compose -f docker-compose.yml up --force-recreate --build
+
+.PHONY: host stop clean fclean reload all
