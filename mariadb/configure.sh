@@ -6,22 +6,23 @@ if [ ! -d "/run/mysqld" ]; then
 fi
 
 if [ ! -d "/var/lib/mysql/mysql" ]; then
+	
 	chown -R mysql:mysql /var/lib/mysql
 
 	# init database
-	mysqld --initialize --basedir=/usr --datadir=/var/lib/mysql --user=mysql --verbose > /dev/null
+	mysql_install_db --basedir=/usr --datadir=/var/lib/mysql --user=mysql --rpm > /dev/null
 
-	tmpfile=$(mktemp)
-	if [ ! -f "$tmpfile" ]; then
-		exit 1
+	tfile=`mktemp`
+	if [ ! -f "$tfile" ]; then
+		return 1
 	fi
 
 	# https://stackoverflow.com/questions/10299148/mysql-error-1045-28000-access-denied-for-user-billlocalhost-using-passw
-	cat << EOF > "$tmpfile"
+	cat << EOF > $tfile
 USE mysql;
 FLUSH PRIVILEGES;
 
-DELETE FROM mysql.user WHERE User='';
+DELETE FROM	mysql.user WHERE User='';
 DROP DATABASE test;
 DELETE FROM mysql.db WHERE Db='test';
 DELETE FROM mysql.user WHERE User='root' AND Host NOT IN ('localhost', '127.0.0.1', '::1');
@@ -35,12 +36,12 @@ GRANT ALL PRIVILEGES ON $WP_DATABASE_NAME.* TO '$WP_DATABASE_USR'@'%';
 FLUSH PRIVILEGES;
 EOF
 	# run init.sql
-	/usr/sbin/mysqld --user=mysql --bootstrap < "$tmpfile"
-	rm -f "$tmpfile"
+	/usr/bin/mysqld --user=mysql --bootstrap < $tfile
+	rm -f $tfile
 fi
 
 # allow remote connections
-sed -i "s|skip-networking|# skip-networking|g" /etc/mysql/my.cnf
-sed -i "s|.*bind-address\s*=.*|bind-address=0.0.0.0|g" /etc/mysql/my.cnf
+sed -i "s|skip-networking|# skip-networking|g" /etc/my.cnf.d/mariadb-server.cnf
+sed -i "s|.*bind-address\s*=.*|bind-address=0.0.0.0|g" /etc/my.cnf.d/mariadb-server.cnf
 
-exec /usr/sbin/mysqld --user=mysql --console
+exec /usr/bin/mysqld --user=mysql --console
